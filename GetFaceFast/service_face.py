@@ -25,6 +25,7 @@ async def read_user_me():
 
 @router.post("/start")
 def start_service():
+    logger.info('start detection service')
     args = {
         'net_type': 'mb_tiny_RFB_fd',
         'input_size': 480,
@@ -40,6 +41,7 @@ def start_service():
             image=cv2.imread(file_path)
             boxes, labels, probs = face_detection(image)
             image_info={
+                'image_name':file,
                 'image_mat':image.tolist(),
                 'boxes': boxes.tolist(),
             }

@@ -1,17 +1,35 @@
 import pika
 import BaseConfig
-from typing import Dict
+from typing import Dict,Callable
 import json
 from SkyLogger import get_current_time
-credentials = pika.PlainCredentials(BaseConfig.RMQ_USER, BaseConfig.RMQ_PASS)
-conn = pika.BlockingConnection(pika.ConnectionParameters(host=BaseConfig.RMQ_IP, port=BaseConfig.RMQ_PORT, virtual_host="/", credentials=credentials))
-channel = conn.channel()
-channel.queue_declare(queue=BaseConfig.RMQ_QUEUE, durable=True)
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
+# lock=threading.Lock()
+local=threading.local()
+
+credentials = pika.PlainCredentials(BaseConfig.RMQ_USER, BaseConfig.RMQ_PASS)
+# conn = pika.BlockingConnection(pika.ConnectionParameters(host=BaseConfig.RMQ_IP, port=BaseConfig.RMQ_PORT, virtual_host="/", credentials=credentials))
+# channel = conn.channel()
+# channel.queue_declare(queue=BaseConfig.RMQ_QUEUE, durable=True)
+
+def init():
+    conn = pika.BlockingConnection(
+        pika.ConnectionParameters(host=BaseConfig.RMQ_IP, port=BaseConfig.RMQ_PORT, virtual_host="/",
+                                  credentials=credentials))
+    channel = conn.channel()
+    return channel
 
 def rmq_send(message:Dict[str, str]) -> None:
+    # with lock:
+    if not hasattr(local,'channel'):
+        channel=init()
+        thread_id = threading.currentThread().ident
+        print(f'线程：{thread_id} 创建 channel')
+        local.channel = channel
     message=json.dumps(message)
-    channel.basic_publish(exchange='',
+    local.channel.basic_publish(exchange='',
                           routing_key=BaseConfig.RMQ_QUEUE,
                           body=message,
                           properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent))
@@ -22,9 +40,13 @@ def callback(ch, method, properties, body):
     print("[x] Done")
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
-def rmq_recv():
-    print(' [*] Waiting for messages. To exit press CTRL+C')
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue=BaseConfig.RMQ_QUEUE, on_message_callback=callback)
-    channel.start_consuming()
-
+def rmq_recv(special_callback) -> None:
+    # with lock:
+    if not hasattr(local,'channel'):
+        channel = init()
+        thread_id = threading.currentThread().ident
+        print(f'线程：{thread_id} 创建 channel')
+        local.channel = channel
+    local.channel.basic_qos(prefetch_count=1)
+    local.channel.basic_consume(queue=BaseConfig.RMQ_QUEUE, on_message_callback=special_callback)
+    local.channel.start_consuming()

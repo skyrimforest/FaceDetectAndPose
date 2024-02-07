@@ -1,14 +1,14 @@
 import asyncio
 import aiohttp
-
+import BaseConfig
 async def fetch(url):
     async with aiohttp.ClientSession() as session:
         async with session.post(url) as response:
             return await response.text()
 
 async def test():
-    url1 = 'http://192.168.0.107:8000/skysendtest'
-    url2 = 'http://192.168.0.107:8000/skyrecvtest'
+    url1='http://'+BaseConfig.OWN_IP_OUT+':'+str(BaseConfig.OWN_PORT)+'/face/start'
+    url2="http://"+BaseConfig.OWN_IP_OUT+':'+str(BaseConfig.OWN_PORT)+'/pose/start'
 
     tasks = [
         fetch(url1),

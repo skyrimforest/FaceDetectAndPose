@@ -1,0 +1,4 @@
+
+<p>An AI pipeline designed with FastAPI</p>
+<p>which takes video as input and outputs</p>
+<p>faces yaw, pitch and roll.</p>

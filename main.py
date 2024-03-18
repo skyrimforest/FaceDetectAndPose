@@ -15,6 +15,7 @@ import asyncio
 app = FastAPI()
 app.include_router(service_angle.router)
 app.include_router(service_face.router)
+
 origins = [
     "*",
 ]
